@@ -1,6 +1,7 @@
 package com.example.reto1.communication;
 
 import com.example.reto1.activity.MapsActivity;
+import com.example.reto1.model.User;
 import com.google.gson.Gson;
 
 public class LocationWorker extends Thread{
@@ -20,7 +21,8 @@ public class LocationWorker extends Thread{
         Gson gson = new Gson();
         while(isAlive){
             delay();
-            utilDomi.PUTrequest("https://reto1-apps-moviles.firebaseio.com/users/"+mapsActivity.getUser().getId()+"/location.json", gson.toJson(mapsActivity.getCurrPos()));
+            String json = gson.toJson(new User(mapsActivity.getUser().getId(), mapsActivity.getCurrPos()));
+            utilDomi.PUTrequest("https://reto1-apps-moviles.firebaseio.com/users/"+mapsActivity.getUser().getId()+".json", json);
             mapsActivity.computeDistances();
         }
     }

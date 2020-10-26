@@ -86,7 +86,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         holes = new ArrayList<>();
         users = new ArrayList<>();
-        status=false;
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -269,15 +268,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Position holePos=holes.get(i).getLocation();
             String holeUserId = holes.get(i).getUserID();
             boolean holeIsConfirmed = holes.get(i).isConfirmed();
-            if(currPos.equals(holePos) && !holeIsConfirmed && !user.getId().equals(holeUserId)){
+            double distance = SphericalUtil.computeDistanceBetween( new LatLng(currPos.getLat(),currPos.getLng()), new LatLng(holePos.getLat(), holePos.getLng()) );
+            if(Math.abs(distance)<5.0 && !holeIsConfirmed && !user.getId().equals(holeUserId)){
                 confirmButton.setVisibility(View.VISIBLE);
                 holeToConfirm=holes.get(i);
                 break;
             }
         }
     }
-
-    private boolean status;
 
     @Override
     public void onClick(View view) {
@@ -301,19 +299,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         String json = utilDomi.GETrequest("https://reto1-apps-moviles.firebaseio.com/holes.json");
                         Type type = new TypeToken<HashMap<String,Hole>>(){}.getType();
                         HashMap<String, Hole> holesMap = gson.fromJson(json, type);
-                        HashSet<Position> holesPos = new HashSet<>();
-                        for(Hole h:holesMap.values()) holesPos.add(h.getLocation());
-                        if(!holesPos.contains(currPos)) {
+                        if(holesMap!=null){
+                            HashSet<Position> holesPos = new HashSet<>();
+                            for(Hole h:holesMap.values()) holesPos.add(h.getLocation());
+                            if(!holesPos.contains(currPos)) {
+                                Hole hole = new Hole(UUID.randomUUID().toString(), user.getId(), currPos, false);
+                                String res = utilDomi.PUTrequest("https://reto1-apps-moviles.firebaseio.com/holes/" + hole.getId() + ".json", gson.toJson(hole));
+                                runOnUiThread(()->Toast.makeText(this, "Hole added successfully!", Toast.LENGTH_SHORT).show());
+                            } else {
+                                runOnUiThread(()->Toast.makeText(this, "It was not possible to add a hole. \nMaybe there is already a hole in this location or connection with database failed", Toast.LENGTH_LONG).show());
+                            }
+                        } else {
                             Hole hole = new Hole(UUID.randomUUID().toString(), user.getId(), currPos, false);
                             String res = utilDomi.PUTrequest("https://reto1-apps-moviles.firebaseio.com/holes/" + hole.getId() + ".json", gson.toJson(hole));
-                            status=true;
-                        }
-                        if(status) {
                             runOnUiThread(()->Toast.makeText(this, "Hole added successfully!", Toast.LENGTH_SHORT).show());
-                            status=false;
-                        } else {
-                            runOnUiThread(()->Toast.makeText(this, "It was not possible to add a hole. \nMaybe there is already a hole in this location or connection with database failed", Toast.LENGTH_LONG).show());
                         }
+
                     }).start();
                 });
                 AlertDialog dialog = builder.create();
